@@ -1,0 +1,303 @@
+---
+title: "Shiny Practice Aida"
+author: "Aida Kazemi"
+date: "July 16, 2019"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+* Practices from Shiny Tutorial website
+* Also Dean Atali and Amin have some tutorials on Shiny
+
+
+
+Shiny template for defning input and output and the way to connect these two using a server:
+
+Setting up a web page that people can visit and modify the appearance:
+
+*ui<- fluidPage()*
+
+Set up a server that for Connecting Input and Output and see interactions:
+
+*server<- function(input, output){}*
+
+Running on the web:
+
+*shinyApp(ui=ui, server=server)*
+
+*It is very important that the name of the file is app.R, otherwise it would not be recognized as a Shiny app.
+
+### Setting up a server and its funcitons
+###### Shiny Examples:
+```{r}
+library(shiny)
+
+ui <- fluidPage(
+  sliderInput(inputId = "num", 
+    label = "Choose a number", 
+    value=25, min = 1, max = 100),
+  textInput(inputId="title",
+    label="Write a title",
+    value="histogram of Random Normal Values"),
+  actionButton(inputId="clicks",label="Click Me"),
+  plotOutput("hist"),
+  verbatimTextOutput("stats")
+)
+
+server <- function(input, output) {
+  
+  #This code: every time you press "click me" it gives a value which is a number of times you press the Click button by code "as.numeric"
+  observeEvent(input$clicks,{
+    print(as.numeric(input$clicks))
+  })
+  output$hist <- renderPlot({
+    hist(rnorm(input$num), main=input$title)
+  })
+  output$stats<- renderPrint({
+   summary(rnorm(input$num)) 
+  })
+}
+
+shinyApp(ui = ui, server = server)
+
+
+
+```
+Using **Eventreactive** function which causes a delay in the reaction of output (The result would change as number in the slide changes after clicking "Update" box)
+
+```{r}
+library(shiny)
+
+ui <- fluidPage(
+  sliderInput(inputId = "num", 
+    label = "Choose a number", 
+    value = 25, min = 1, max = 100),
+  textInput(inputId="title",
+    label="Write a title",
+    value="histogram of Random Normal Values"),
+  actionButton(inputId="go",label="Update"),
+  plotOutput("hist"),
+  verbatimTextOutput("stats")
+)
+
+server <- function (input, output) {
+  
+  data <- eventReactive(input$go,{
+    rnorm(input$num)
+  })
+  
+   output$hist <- renderPlot({
+    hist(data(), main=input$title)
+  })
+  output$stats<- renderPrint({
+   summary(rnorm(input$num)) 
+  })
+
+}
+shinyApp(ui = ui, server = server)
+
+```
+## R Markdown
+Using "Reactive" to reference data, it is as a global variable  
+```{r }
+library(shiny)
+
+ui <- fluidPage(
+
+  sliderInput(inputId = "num", 
+    label = "Choose a number", 
+    value = 25, min = 1, max = 100),
+  plotOutput("hist"),
+  verbatimTextOutput("stats")
+)
+
+server <- function(input, output) {
+  data<- reactive({
+    rnorm(input$num)
+  })
+  
+  output$hist <- renderPlot({
+    hist(rnorm(input$num))
+  })
+  output$stats<- renderPrint({
+   summary(rnorm(input$num)) 
+  })
+}
+
+shinyApp(ui = ui, server = server)
+
+```
+
+### Setting up appearance
+How to stylize (about appearance) the shiny web app
+
+How to add static content to the web:
+** "Tags" object in Shiny would be a list of functions that contains HTML tags that can crea a HTML
+``` {r}
+names(tags)
+tags$a(href="www.rstudio.com", "Rstudio")
+tags$h1("Hello")
+tags$code(tags$h1("This is a Shiny app."))
+#tagging images: special way to put pictures in the shiny app by opening a file called "www" inside the app directory fodler and upoad the image there: this will link the file contain images to a URL
+tags$img(height=100, width=100,
+         src="bigrob.png")
+```
+
+How to creat layout to the web:
+* To place an element in the grid, cal it as a argument of a layout function:
+
+``` {r}
+
+
+ui <- fluidPage(
+  fluidRow(
+    column(3),
+    column(5, sliderInput())),
+    
+  fluidRow(
+    column(4, offset=8,
+           plotOutput("hist")
+          )
+  )
+
+)
+
+
+```
+
+*How to stack the layers in the app: use shiny Widgets gallery and using panels.
+* There are 12 panels in R, panels are used to gruop elements into a single unit for aesthetic or functional reasons
+* Wellpanel:
+```{r }
+library(shiny)
+
+ui <- fluidPage(
+  #Group elements into a grey "well"
+  wellPanel(
+  sliderInput(inputId = "num", 
+    label = "Choose a number", 
+    value = 25, min = 1, max = 100)
+  ),
+  plotOutput("hist"),
+  verbatimTextOutput("stats")
+)
+
+server <- function(input, output) {
+  data<- reactive({
+    rnorm(input$num)
+  })
+  
+  output$hist <- renderPlot({
+    hist(rnorm(input$num))
+  })
+  output$stats<- renderPrint({
+   summary(rnorm(input$num)) 
+  })
+}
+
+shinyApp(ui = ui, server = server)
+
+```
+
+
+*Tab panel:
+```{r }
+library(shiny)
+
+ui <- fluidPage(title = "Random generator",
+  tabsetPanel(              
+    tabPanel(title = "Normal data",
+      plotOutput("norm"),
+      actionButton("renorm", "Resample")
+    ),
+    tabPanel(title = "Uniform data",
+      plotOutput("unif"),
+      actionButton("reunif", "Resample")
+    ),
+    tabPanel(title = "Chi Squared data",
+      plotOutput("chisq"),
+      actionButton("rechisq", "Resample")
+    )
+  )
+)
+
+server <- function(input, output) {
+  
+  rv <- reactiveValues(
+    norm = rnorm(500), 
+    unif = runif(500),
+    chisq = rchisq(500, 2))
+  
+  observeEvent(input$renorm, { rv$norm <- rnorm(500) })
+  observeEvent(input$reunif, { rv$unif <- runif(500) })
+  observeEvent(input$rechisq, { rv$chisq <- rchisq(500, 2) })
+  
+  output$norm <- renderPlot({
+    hist(rv$norm, breaks = 30, col = "grey", border = "white",
+      main = "500 random draws from a standard normal distribution")
+  })
+  output$unif <- renderPlot({
+    hist(rv$unif, breaks = 30, col = "grey", border = "white",
+      main = "500 random draws from a standard uniform distribution")
+  })
+  output$chisq <- renderPlot({
+    hist(rv$chisq, breaks = 30, col = "grey", border = "white",
+       main = "500 random draws from a Chi Square distribution with two degree of freedom")
+  })
+}
+
+shinyApp(server = server, ui = ui)
+
+```
+
+* Nav Bar Panel:
+``` {r}
+library(shiny)
+
+ui <- navbarPage(title = "Random generator",
+               
+    tabPanel(title = "Normal data",
+      plotOutput("norm"),
+      actionButton("renorm", "Resample")
+    ),
+    tabPanel(title = "Uniform data",
+      plotOutput("unif"),
+      actionButton("reunif", "Resample")
+    ),
+    tabPanel(title = "Chi Squared data",
+      plotOutput("chisq"),
+      actionButton("rechisq", "Resample")
+    )
+  )
+
+
+server <- function(input, output) {
+  
+  rv <- reactiveValues(
+    norm = rnorm(500), 
+    unif = runif(500),
+    chisq = rchisq(500, 2))
+  
+  observeEvent(input$renorm, { rv$norm <- rnorm(500) })
+  observeEvent(input$reunif, { rv$unif <- runif(500) })
+  observeEvent(input$rechisq, { rv$chisq <- rchisq(500, 2) })
+  
+  output$norm <- renderPlot({
+    hist(rv$norm, breaks = 30, col = "grey", border = "white",
+      main = "500 random draws from a standard normal distribution")
+  })
+  output$unif <- renderPlot({
+    hist(rv$unif, breaks = 30, col = "grey", border = "white",
+      main = "500 random draws from a standard uniform distribution")
+  })
+  output$chisq <- renderPlot({
+    hist(rv$chisq, breaks = 30, col = "grey", border = "white",
+       main = "500 random draws from a Chi Square distribution with two degree of freedom")
+  })
+}
+
+shinyApp(server = server, ui = ui)
+```
+
+* How to add CSS to the web (taking the basic elements and tell the web browser how they shoudl look)
